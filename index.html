@@ -2,7 +2,14 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="キャッチボール">
+<meta name="theme-color" content="#20303c">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-180.png">
 <title>プードルとキャッチボール</title>
 <style>
   html, body {
@@ -10,27 +17,60 @@
     height: 100%;
     background: #20303c;
     overflow: hidden;
+    overscroll-behavior: none;
   }
   body {
+    position: fixed;
+    inset: 0;
     display: flex;
     align-items: center;
     justify-content: center;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    box-sizing: border-box;
   }
   canvas {
     display: block;
-    width: min(100vw, calc(100vh * 16 / 9));
+    width: min(100%, calc((100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom)) * 16 / 9));
+    width: min(100%, calc((100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom)) * 16 / 9));
     aspect-ratio: 16 / 9;
     background: #8fd3ff;
     touch-action: none;
     user-select: none;
     -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
     cursor: grab;
   }
   canvas.dragging { cursor: grabbing; }
+
+  /* スマホを縦に持っているときの案内 */
+  #rotate {
+    display: none;
+    position: fixed;
+    left: 0; right: 0; bottom: calc(env(safe-area-inset-bottom) + 12vh);
+    text-align: center;
+    color: #fff;
+    font: bold 17px "Hiragino Maru Gothic ProN", "Yu Gothic UI", Meiryo, sans-serif;
+    line-height: 1.7;
+    pointer-events: none;
+  }
+  #rotate .phone {
+    display: inline-block;
+    font-size: 40px;
+    animation: tilt 2.2s ease-in-out infinite;
+  }
+  @keyframes tilt {
+    0%, 25% { transform: rotate(0deg); }
+    60%, 100% { transform: rotate(-90deg); }
+  }
+  @media (orientation: portrait) and (max-width: 600px) {
+    #rotate { display: block; }
+  }
 </style>
 </head>
 <body>
 <canvas id="game"></canvas>
+<div id="rotate"><span class="phone">📱</span><br>横向きにすると大きな画面で遊べます</div>
 <script src="game.js"></script>
 </body>
 </html>
