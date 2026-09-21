@@ -28,11 +28,18 @@
     padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
     box-sizing: border-box;
   }
-  canvas {
-    display: block;
+  [hidden] { display: none !important; }
+  #stage {
+    position: relative;
     width: min(100%, calc((100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom)) * 16 / 9));
     width: min(100%, calc((100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom)) * 16 / 9));
     aspect-ratio: 16 / 9;
+    --u: 1px;   /* ゲーム画面の 1/960 幅。game.js が更新する */
+  }
+  #game {
+    display: block;
+    width: 100%;
+    height: 100%;
     background: #8fd3ff;
     touch-action: none;
     user-select: none;
@@ -42,6 +49,72 @@
     cursor: grab;
   }
   canvas.dragging { cursor: grabbing; }
+
+  /* 写真登録ボタン (タイトル画面と結果画面だけに表示) */
+  #photo-ui {
+    position: absolute;
+    right: 2%;
+    bottom: 1.2%;
+    display: none;
+    align-items: center;
+    gap: 0.6em;
+    font: bold max(11px, calc(var(--u) * 17)) "Hiragino Maru Gothic ProN", "Yu Gothic UI", Meiryo, sans-serif;
+  }
+  body[data-mode="title"] #photo-ui, body[data-mode="gameover"] #photo-ui { display: flex; }
+  button {
+    font: inherit;
+    padding: 0.45em 1em;
+    border-radius: 999px;
+    border: 2px solid #fff;
+    background: rgba(37, 50, 74, 0.88);
+    color: #fff;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  button.sub { background: rgba(255, 255, 255, 0.88); color: #25324a; }
+  #photo-thumb {
+    width: 2.7em; height: 2.7em;
+    border-radius: 50%;
+    border: 2px solid #fff;
+    object-fit: cover;
+    background: #17171b;
+  }
+
+  /* 顔の位置合わせ画面 */
+  #editor {
+    position: fixed;
+    inset: 0;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(15, 22, 30, 0.94);
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    color: #fff;
+    font: bold 15px "Hiragino Maru Gothic ProN", "Yu Gothic UI", Meiryo, sans-serif;
+  }
+  .ed-box { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+  #ed-canvas {
+    width: min(86vw, calc(100vh - 250px), 360px);
+    aspect-ratio: 1;
+    border-radius: 14px;
+    touch-action: none;
+    cursor: move;
+    background: #111;
+  }
+  .ed-side { display: flex; flex-direction: column; align-items: center; gap: 12px; width: min(86vw, 360px); text-align: center; }
+  .ed-side p { margin: 0; line-height: 1.6; }
+  .ed-side small { font-weight: normal; opacity: 0.75; line-height: 1.5; }
+  .ed-zoom { display: flex; align-items: center; gap: 8px; width: 100%; }
+  .ed-zoom input { flex: 1; }
+  .ed-btns { display: flex; gap: 12px; }
+  .ed-btns button { font-size: 16px; min-width: 7em; }
+  #ed-ok { background: #e0653c; }
+  @media (orientation: landscape) and (max-height: 520px) {
+    .ed-box { flex-direction: row; gap: 22px; }
+    #ed-canvas { width: min(calc(100vh - 40px), 330px); }
+    .ed-side { width: min(44vw, 330px); }
+  }
 
   /* スマホを縦に持っているときの案内 */
   #rotate {
@@ -69,8 +142,31 @@
 </style>
 </head>
 <body>
-<canvas id="game"></canvas>
+<div id="stage">
+  <canvas id="game"></canvas>
+  <div id="photo-ui">
+    <img id="photo-thumb" alt="" hidden>
+    <button id="photo-add" type="button">📷 うちの子の写真を登録</button>
+    <button id="photo-del" class="sub" type="button" hidden>写真を削除</button>
+  </div>
+</div>
+<input type="file" id="photo-file" accept="image/*" hidden>
+<div id="editor" hidden>
+  <div class="ed-box">
+    <canvas id="ed-canvas"></canvas>
+    <div class="ed-side">
+      <p>顔が丸の中に入るように<br>ドラッグで移動、スライダーで拡大してね</p>
+      <div class="ed-zoom">🔍<input type="range" id="ed-zoom" min="0" max="1" step="0.001" value="0"></div>
+      <div class="ed-btns">
+        <button id="ed-cancel" class="sub" type="button">キャンセル</button>
+        <button id="ed-ok" type="button">決定</button>
+      </div>
+      <small>写真はこの端末の中だけに保存され、<br>どこにも送信されません</small>
+    </div>
+  </div>
+</div>
 <div id="rotate"><span class="phone">📱</span><br>横向きにすると大きな画面で遊べます</div>
+<script src="photo.js"></script>
 <script src="game.js"></script>
 </body>
 </html>

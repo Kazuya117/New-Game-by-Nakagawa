@@ -172,7 +172,11 @@ const clouds = [
   { x: 650, y: 55, s: 1.2 }, { x: 880, y: 140, s: 0.8 },
 ];
 
-function setMode(m) { game.mode = m; game.modeTime = 0; }
+function setMode(m) { game.mode = m; game.modeTime = 0; document.body.dataset.mode = m; }
+document.body.dataset.mode = game.mode;
+
+// 登録された「うちの子」の顔写真 (なければ null → いつものプードル)
+const dogPhoto = () => (window.DogPhoto && window.DogPhoto.image) || null;
 
 function addPopup(text, x, y, color = '#fff', size = 26, delay = 0) {
   popups.push({ text, x: clamp(x, 110, W - 110), y, color, size, t: -delay });
@@ -776,7 +780,15 @@ function drawDog() {
   ctx.fillStyle = '#ffd24a';
   ctx.beginPath(); ctx.arc(49, -11, 3.2, 0, TAU); ctx.fill();
 
+  const photo = dogPhoto();
   ctx.translate(HEAD.x, HEAD.y);
+  if (photo) {
+    ctx.rotate(dog.ha * 0.5);
+    drawPhotoHead(photo);
+    ctx.restore();
+    ctx.restore();
+    return;
+  }
   ctx.rotate(dog.ha);
   ctx.fillStyle = FUR;
   // マズル
@@ -824,6 +836,25 @@ function drawDog() {
   curl(-3, -16, 3.5, 3.6); curl(3, -12, 3, 0.4);
   ctx.restore();
 
+  ctx.restore();
+}
+
+// 登録した顔写真を、ふわふわの毛で縁取った丸い頭として描く
+function drawPhotoHead(img) {
+  const R = 32;   // 顔が分かるように、頭は大きめ (ビッグヘッド)
+  ctx.save();
+  ctx.translate(2, -22);   // くわえたボールが顔に重ならず、あごの端に来る位置
+  if (dog.pose === 'happy') ctx.rotate(Math.sin(game.time * 11) * 0.12);
+  else if (dog.pose === 'run') ctx.rotate(Math.sin(dog.phase * 2) * 0.06);
+  ctx.fillStyle = FUR;
+  fluff(0, 0, R + 3, 14, 0.2);
+  ctx.scale(dog.facing, 1);   // 左向きのときも写真は左右反転させない
+  ctx.save();
+  ctx.beginPath(); ctx.arc(0, 0, R, 0, TAU); ctx.clip();
+  ctx.drawImage(img, -R, -R, R * 2, R * 2);
+  ctx.restore();
+  ctx.strokeStyle = 'rgba(255,255,255,0.9)'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(0, 0, R, 0, TAU); ctx.stroke();
   ctx.restore();
 }
 
@@ -997,7 +1028,7 @@ function drawTitle() {
   ctx.fillStyle = 'rgba(20, 40, 70, 0.35)';
   ctx.fillRect(0, 0, W, H);
   text('プードルとキャッチボール', W / 2, 150, 52, '#fff');
-  text('ボールを投げて、黒いプードルにキャッチしてもらおう！', W / 2, 215, 22, '#ffe45c');
+  text(dogPhoto() ? 'ボールを投げて、うちの子にキャッチしてもらおう！' : 'ボールを投げて、黒いプードルにキャッチしてもらおう！', W / 2, 215, 22, '#ffe45c');
   if (Math.sin(game.time * 4) > -0.4) text('クリック / タップでスタート', W / 2, 300, 26, '#fff');
   if (game.best > 0) text(`ベストスコア  ${game.best}`, W / 2, 350, 18, '#d8f0ff');
 }
@@ -1095,6 +1126,7 @@ function resize() {
   canvas.width = Math.max(1, Math.round(r.width * dpr));
   canvas.height = Math.max(1, Math.round(r.width * dpr * H / W));
   scale = canvas.width / W;
+  canvas.parentElement.style.setProperty('--u', `${r.width / W}px`);
 }
 window.addEventListener('resize', resize);
 if (window.ResizeObserver) new ResizeObserver(resize).observe(canvas);
@@ -1111,7 +1143,9 @@ function frame(now) {
 requestAnimationFrame(frame);
 
 // デバッグ・動作確認用
-window.__game = { game, ball, dog, startGame, throwBall(vx, vy) {
+window.__game = { game, ball, dog, startGame,
+  tick(sec) { for (let i = 0; i < sec / STEP; i++) update(); render(); },
+  throwBall(vx, vy) {
   if (game.mode !== 'aim') return false;
   drag = { sx: 0, sy: 0, x: -vx / PULL_TO_V, y: -vy / PULL_TO_V };
   releaseThrow();
