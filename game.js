@@ -77,10 +77,30 @@ function saveBest(v) {
 let actx = null;
 let soundOn = true;
 
+let audioUnlocked = false;
+
+// タップ操作のたびに呼ぶ。iOS Safari はユーザー操作中でないと音声を開始できない
 function initAudio() {
-  if (actx) { if (actx.state === 'suspended') actx.resume(); return; }
-  const AC = window.AudioContext || window.webkitAudioContext;
-  if (AC) actx = new AC();
+  if (!actx) {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    // iPhone の消音スイッチがオンでも鳴るように「メディア再生」扱いにする (iOS 16.4+)
+    try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) { /* 非対応でも問題なし */ }
+    actx = new AC();
+  }
+  // iOS では suspended のほか interrupted (着信・アプリ切り替え後) にもなる
+  if (actx.state !== 'running') {
+    const p = actx.resume();
+    if (p && p.catch) p.catch(() => {});
+  }
+  if (!audioUnlocked) {
+    // 無音のバッファを再生して、音声出力を確実に有効化する
+    const src = actx.createBufferSource();
+    src.buffer = actx.createBuffer(1, 1, 22050);
+    src.connect(actx.destination);
+    src.start(0);
+    if (actx.state === 'running') audioUnlocked = true;
+  }
 }
 
 function tone(f1, f2, dur, type = 'sine', vol = 0.12, delay = 0) {
@@ -1058,6 +1078,7 @@ canvas.addEventListener('pointercancel', () => { drag = null; canvas.classList.r
 canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 // iOS Safari は指を離したタイミングでないと音を有効化できないことがある
 window.addEventListener('touchend', initAudio, { passive: true });
+window.addEventListener('pointerup', initAudio);
 window.addEventListener('click', initAudio);
 // iOS でのダブルタップ拡大・ピンチ拡大を防ぐ
 document.addEventListener('gesturestart', (e) => e.preventDefault());
